@@ -1,30 +1,8 @@
-
-//Add event listener for browser close window
-var movingWithinTheSameDomain = false;
-window.addEventListener("beforeunload", function(event) {
-    var targetHost = new URL(event.target.URL).hostname;
-    movingWithinTheSameDomain = targetHost === window.location.hostname;
-    if(!movingWithinTheSameDomain)
-    {userClosePageOrTab();}
-
-});
-
-function logToServerConsole(msg){
-    var xhttp = new XMLHttpRequest();
-    xhttp.open("POST", "/log", true);
-    xhttp.send(msg);
-}
-
-function userClosePageOrTab(){
-    var xhttp = new XMLHttpRequest();
-    xhttp.open("GET", "/stinvalidaton", true);
-    xhttp.send();
-}
-
-function userMovingWithingTheSameDomain(){
-    movingWithinTheSameDomain = true;
-    return true;
-}
+const MSG_BASE = "Doing Work ";
+const MSG_ADMIN_WORK = MSG_BASE + "for Admin Role";
+const MSG_VENDOR_ROLE = MSG_BASE + "for Vendor Role";
+const MSG_CUSTOMER_ROLE = MSG_BASE + "for Customer Role";
+const MSG_NOT_AUTHORIZED = "Not authorized";
 
 function activityWatcher(){
  
@@ -34,22 +12,34 @@ function activityWatcher(){
  
     //Five minutes. 60 x 5 = 300 seconds.
     //var maxInactivity = (60 * 5);
-    var maxInactivity = 10; //1 minute
+    var maxInactivity = 60; //1 minute
     //Setup the setInterval method to run
     //every second. 1000 milliseconds = 1 second.
+
+    const maxHalf = Math.floor(maxInactivity/2);
+    var flagKeepOnCounting = true;
     setInterval(function(){
+        if(flagKeepOnCounting)
         secondsSinceLastActivity++;
         console.log(secondsSinceLastActivity + ' seconds since the user was last active');
+
         //if the user has been inactive or idle for longer
         //then the seconds specified in maxInactivity
+
+
+        if(secondsSinceLastActivity >= maxHalf){
+            console.log("SLA: "+secondsSinceLastActivity+" ,Max Half: "+maxHalf);
+            document.getElementById("sit").hidden = false;
+        }
+
         if(secondsSinceLastActivity > maxInactivity){
+            flagKeepOnCounting  = false;
             console.log('User has been inactive for more than ' + maxInactivity + ' seconds');
-            //Redirect them to your logout.php page.
             var xhttp = new XMLHttpRequest();
-            xhttp.open("GET", "/id", true);
+            xhttp.open("GET", "/stinvalidaton", true);
             xhttp.send();
-            //alert("Your session has expired!")
-            //location.href = 'logout.php';
+            alert("Your session has expired!")
+            window.location.replace("http://www."+window.location.host+"/login");
         }
     }, 1000);
  
@@ -57,6 +47,7 @@ function activityWatcher(){
     function activity(){
         //reset the secondsSinceLastActivity variable
         //back to 0
+        document.getElementById("sit").hidden = true;
         secondsSinceLastActivity = 0;
     }
  
@@ -75,19 +66,6 @@ function activityWatcher(){
 
 
 }
-function getCookie(cname) {
-    var name = cname + "=";
-    var ca = document.cookie.split(';');
-    for(var i = 0; i < ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) === ' ') {
-            c = c.substring(1);
-        }
-        if (c.indexOf(name) === 0) {
-            return c.substring(name.length, c.length);
-        }
-    }
-    return "";
-}
+
 activityWatcher();
 

@@ -1,8 +1,6 @@
-package com.sevenfive.assignment4.ui;
+package com.sevenfive.assignment4.helper;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class RequestUtils {

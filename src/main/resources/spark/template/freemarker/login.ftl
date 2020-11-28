@@ -41,7 +41,7 @@
         }
 
         img.avatar {
-            width: 40%;
+            width: 10%;
             border-radius: 50%;
         }
 

@@ -1,8 +1,9 @@
-package com.sevenfive.assignment4.demo;
+package com.sevenfive.assignment4;
 
 import com.sevenfive.assignment4.auth.Auth;
 import com.sevenfive.assignment4.auth.models.User;
-import com.sevenfive.assignment4.ui.RequestUtils;
+import com.sevenfive.assignment4.helper.RequestUtils;
+import com.sevenfive.assignment4.helper.SessionInvalidator;
 import spark.ModelAndView;
 import spark.Request;
 import spark.TemplateEngine;
@@ -14,7 +15,9 @@ import java.util.UUID;
 import static spark.Spark.*;
 
 public class AppServer {
-    
+
+    private static Map<String, SessionInvalidator> mapSession = new HashMap<>();
+
     public static void main(String[] args) {
 
         final TemplateEngine engine = new FreeMarkerEngine();
@@ -29,12 +32,6 @@ public class AppServer {
                 return new ModelAndView(map,"home.ftl");
 
         },engine);
-
-        get("/id",((request, response) -> {
-           String id =  request.cookie("id");
-          // System.out.println("Id recieved :"+id);
-           return 200;
-        }));
 
         get("/logout",(request, response) -> {
             String token = request.session().attribute("id");
@@ -65,62 +62,35 @@ public class AppServer {
         })));
 
 
-        get("/admin",(request, response) -> {
-
+        get("/authorization",(request, response) -> {
             String token = request.session().attribute("id");
-            User user  = Auth.getInstance().getUser(token);
-            Map<String,String> map = new HashMap<>();
-            map.put("uname",user.getUsername());
-            map.put("role", Auth.Role.ADMIN.toString());
-            //Check to see if it's authorized
-            if(!Auth.getInstance().isAuthorized(token, Auth.Role.ADMIN))
-            {
-                return new ModelAndView(map,"notauthorized.ftl");
-
-            }
+            User user =  Auth.getInstance().getUser(token);
+            System.out.println("role-"+user.getRole());
+            return user.getRole();
+        });
 
 
-            return new ModelAndView(map,"content.ftl");
-        },engine);
-
-
-        get("/customer",(request, response) -> {
-
+        get("/clr",(request, response) -> {
             String token = request.session().attribute("id");
-            User user  = Auth.getInstance().getUser(token);
-            Map<String,String> map = new HashMap<>();
-            map.put("uname",user.getUsername());
-            map.put("role", Auth.Role.CUSTOMER.toString());
-            //Check to see if it's authorized
-            if(!Auth.getInstance().isAuthorized(token, Auth.Role.CUSTOMER))
-            {
-                return new ModelAndView(map,"notauthorized.ftl");
+            SessionInvalidator sessionInvalidator = mapSession.getOrDefault(token,null);
+            if(sessionInvalidator!=null){
+                sessionInvalidator.ping();
+                System.out.println("pinging received from client");
+            }else{
+                sessionInvalidator = new SessionInvalidator(token,(obj)->{
+                    try{
+                        System.out.println("Terminating session");
+                        mapSession.remove(token);
+                        sessionInvalidationCode(request,token);
 
+                    }catch (Exception ignored){};
+
+                },null);
+
+                mapSession.put(token,sessionInvalidator);
             }
-
-
-            return new ModelAndView(map,"content.ftl");
-        },engine);
-
-        get("/vendor",(request, response) -> {
-
-            String token = request.session().attribute("id");
-            User user  = Auth.getInstance().getUser(token);
-            Map<String,String> map = new HashMap<>();
-            map.put("uname",user.getUsername());
-            map.put("role", Auth.Role.VENDOR.toString());
-            //Check to see if it's authorized
-            if(!Auth.getInstance().isAuthorized(token, Auth.Role.VENDOR))
-            {
-                return new ModelAndView(map,"notauthorized.ftl");
-
-            }
-
-
-            return new ModelAndView(map,"content.ftl");
-        },engine);
-
-
+            return true;
+        });
 
         //Ajax session invalidation call
         get("/stinvalidaton",(request, response) -> {
@@ -151,8 +121,8 @@ public class AppServer {
 
         }));
 
+        //For Debugging and Testing purposes
         post("/log",((request, response) -> {
-
           System.out.println("Log from browser:"+request.body());
           return true;
         }));
